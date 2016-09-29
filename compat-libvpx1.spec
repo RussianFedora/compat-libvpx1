@@ -9,7 +9,7 @@ Version:		%{majorver}.%{minorver}.%{tinyver}
 Release:		1%{?dist}
 License:		BSD
 Group:			System Environment/Libraries
-Source0:		http://downloads.webmproject.org/releases/webm/%{name}-%{version}.tar.bz2
+Source0:		http://downloads.webmproject.org/releases/webm/libvpx-%{version}.tar.bz2
 # Thanks to debian.
 Source2:		libvpx.ver
 URL:			http://www.webmproject.org/code/
