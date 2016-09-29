@@ -16,7 +16,7 @@ URL:			http://www.webmproject.org/code/
 %ifarch %{ix86} x86_64
 BuildRequires:		yasm
 %endif
-BuildRequires:		doxygen, php-cli
+BuildRequires:		doxygen, php-cli, perl(Getopt::Long)
 
 # Explicitly conflict with older libvpx packages that ship libraries
 # with the same soname as this compat package
@@ -26,7 +26,7 @@ Conflicts: libvpx < 1.4.0
 Compatibility package with libvpx libraries ABI version 1.
 
 %prep
-%setup -q -n libvpx-v%{version}
+%setup -q -n libvpx-%{version}
 
 %build
 %ifarch %{ix86}
@@ -43,10 +43,14 @@ Compatibility package with libvpx libraries ABI version 1.
 %endif
 %endif
 
-# The configure script will reject the shared flag on the generic target
-# This means we need to fall back to the manual creation we did before. :P
+# History: The configure script used to reject the shared flag on the generic target.
+# This meant that we needed to fall back to manual shared lib creation.
+# However, the modern configure script permits the shared flag and assumes ELF.
+# Additionally, the libvpx.ver would need to be updated to work properly.
+# As a result, we disable this universally, but keep it around in case we ever need to support
+# something "special".
 %if "%{vpxtarget}" == "generic-gnu"
-%global generic_target 1
+%global generic_target 0
 %else
 %global	generic_target 0
 %endif
@@ -56,7 +60,13 @@ CROSS=armv7hl-redhat-linux-gnueabi- CHOST=armv7hl-redhat-linux-gnueabi-hardfloat
 %else
 ./configure --target=%{vpxtarget} \
 %endif
+%ifarch %{arm}
+--disable-neon --disable-neon_asm \
+%endif
 --enable-pic --disable-install-srcs \
+--enable-vp9-decoder --enable-vp9-encoder \
+--enable-vp10-decoder --enable-vp10-encoder \
+--enable-experimental --enable-spatial-svc \
 %if ! %{generic_target}
 --enable-shared \
 %endif
@@ -84,35 +94,37 @@ sed -i "s|NM=armv7hl-redhat-linux-gnueabi-nm|NM=nm|g" docs-%{vpxtarget}.mk
 
 make %{?_smp_mflags} verbose=true target=libs
 
-%if %{generic_target}
 # Manual shared library creation
+# We should never need to do this anymore, and if we do, we need to fix the version-script.
+%if %{generic_target}
 mkdir tmp
 cd tmp
 ar x ../libvpx_g.a
 cd ..
-gcc -fPIC -shared -pthread -lm -Wl,--no-undefined -Wl,-soname,libvpx.so.%{majorver} -Wl,--version-script,%{SOURCE2} -Wl,-z,noexecstack -o libvpx.so.%{soversion} tmp/*.o
+gcc -fPIC -shared -pthread -lm -Wl,--no-undefined -Wl,-soname,libvpx.so.%{somajor} -Wl,--version-script,%{SOURCE2} -Wl,-z,noexecstack -o libvpx.so.%{soversion} tmp/*.o
 rm -rf tmp
 %endif
 
 # Temporarily dance the static libs out of the way
-mv libvpx.a libNOTvpx.a
-mv libvpx_g.a libNOTvpx_g.a
+# mv libvpx.a libNOTvpx.a
+# mv libvpx_g.a libNOTvpx_g.a
 
 # We need to do this so the examples can link against it.
-ln -sf libvpx.so.%{soversion} libvpx.so
+# ln -sf libvpx.so.%{soversion} libvpx.so
 
-make %{?_smp_mflags} verbose=true target=examples CONFIG_SHARED=1
-make %{?_smp_mflags} verbose=true target=docs
+# make %{?_smp_mflags} verbose=true target=examples CONFIG_SHARED=1
+# make %{?_smp_mflags} verbose=true target=docs
 
 # Put them back so the install doesn't fail
-mv libNOTvpx.a libvpx.a
-mv libNOTvpx_g.a libvpx_g.a
+# mv libNOTvpx.a libvpx.a
+# mv libNOTvpx_g.a libvpx_g.a
 
 %install
 make DIST_DIR=%{buildroot}%{_prefix} dist
 
-# Simpler to label the dir as %%doc.
-mv %{buildroot}/usr/docs doc/
+if [ -d %{buildroot}/usr/docs ]; then
+   mv %{buildroot}/usr/docs doc/
+fi
 
 %if %{generic_target}
 install -p libvpx.so.%{soversion} %{buildroot}%{_libdir}
