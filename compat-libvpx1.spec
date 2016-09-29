@@ -1,23 +1,17 @@
 %global majorver 1
-%global minorver 3
+%global minorver 5
 %global tinyver  0
 
 Name:			compat-libvpx1
 Summary:		Compat package with libvpx libraries
 Version:		%{majorver}.%{minorver}.%{tinyver}
 %global soversion	%{version}
-Release:		4%{?dist}
+Release:		1%{?dist}
 License:		BSD
 Group:			System Environment/Libraries
-Source0:		http://webm.googlecode.com/files/libvpx-v%{version}.tar.bz2
+Source0:		http://downloads.webmproject.org/releases/webm/%{name}-%{version}.tar.bz2
 # Thanks to debian.
 Source2:		libvpx.ver
-Patch0:			Bug-fix-in-ssse3-quantize-function.patch
-# Fix the build with gcc 5
-# http://launchpadlibrarian.net/199480430/libvpx_1.3.0-3_1.3.0-3ubuntu1.diff.gz
-Patch1:			libvpx-v1.3.0-gcc-5.patch
-# Allow setting a size-limit to fix CVE-2015-1258
-Patch2:			libvpx-1.3.0-CVE-2015-1258.patch
 URL:			http://www.webmproject.org/code/
 %ifarch %{ix86} x86_64
 BuildRequires:		yasm
@@ -33,9 +27,6 @@ Compatibility package with libvpx libraries ABI version 1.
 
 %prep
 %setup -q -n libvpx-v%{version}
-%patch0 -p1 -b .patch0
-%patch1 -p1 -b .gcc-5
-%patch2 -p1 -b .CVE-2015-1258
 
 %build
 %ifarch %{ix86}
@@ -151,6 +142,9 @@ rm -rf %{buildroot}%{_libdir}/pkgconfig/
 %{_libdir}/libvpx.so.*
 
 %changelog
+* Thu Sep 29 2016 Arkady L. Shane <ashejn@russianfedora.pro> - 1.5.0-1
+- update to 1.5.0
+
 * Wed Feb 03 2016 Fedora Release Engineering <releng@fedoraproject.org> - 1.3.0-4
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_24_Mass_Rebuild
 
